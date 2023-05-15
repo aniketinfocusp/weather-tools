@@ -439,7 +439,7 @@ class ConvertToAsset(beam.DoFn, beam.PTransform, KwargsFactoryMixin):
                           band_names_dict=self.band_names_dict,
                           initialization_time_regex=self.initialization_time_regex,
                           forecast_time_regex=self.forecast_time_regex) as ds:
-
+            ds = ds.isel(time=0)
             attrs = ds.attrs
             data = list(ds.values())
             asset_name = get_ee_safe_name(uri)
@@ -468,11 +468,11 @@ class ConvertToAsset(beam.DoFn, beam.PTransform, KwargsFactoryMixin):
                         for i, da in enumerate(data):
                             f.write(da, i+1)
                             # Making the channel name EE-safe before adding it as a band name.
-                            # f.set_band_description(i+1, get_ee_safe_name(channel_names[i]))
-                            # f.update_tags(i+1, band_name=channel_names[i])
-                            # f.update_tags(i+1, **da.attrs)
+                            f.set_band_description(i+1, get_ee_safe_name(channel_names[i]))
+                            f.update_tags(i+1, band_name=channel_names[i])
+                            f.update_tags(i+1, **da.attrs)
                         # Write attributes as tags in tiff.
-                        # f.update_tags(**attrs)
+                        f.update_tags(**attrs)
 
                     # Copy in-memory tiff to gcs.
                     target_path = os.path.join(self.asset_location, file_name)
