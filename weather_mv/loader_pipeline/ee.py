@@ -336,7 +336,7 @@ class ToEarthEngine(ToDataSink):
                 | 'FilterFiles' >> FilterFilesTransform.from_kwargs(**vars(self))
                 | 'ReshuffleFiles' >> beam.Reshuffle()
                 | 'ConvertToAsset' >> ConvertToAsset.from_kwargs(band_names_dict=band_names_dict, **vars(self))
-                | 'IngestIntoEE' >> IngestIntoEETransform.from_kwargs(**vars(self))
+                # | 'IngestIntoEE' >> IngestIntoEETransform.from_kwargs(**vars(self))
             )
         else:
             (
