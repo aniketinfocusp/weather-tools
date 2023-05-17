@@ -1,9 +1,13 @@
+import argparse
 import wradlib as wrl
 import rasterio
 from rasterio.io import MemoryFile
 import apache_beam as beam
 from apache_beam.io.filesystem import CompressionTypes, FileSystem, CompressedFile, DEFAULT_READ_BUFFER_SIZE
 from apache_beam.io.filesystems import FileSystems
+from weather_mv.loader_pipeline.sinks import ToDataSink
+import dataclasses
+import argparse
 import tempfile
 import os
 import logging
@@ -134,6 +138,25 @@ class ConvertRadolanToTiff(beam.DoFn):
         ds = self.get_dataset(uri)
         
         yield self.convert(ds, uri)
+
+
+@dataclasses.dataclass
+class RadolanPipeline(ToDataSink):
+    uri: str
+    out_dir: str
+
+    @classmethod
+    def add_parser_arguments(cls, subparser: argparse.ArgumentParser):
+        subparser.add_argument('--uri', type=str, required=True, default=None,
+                               help='URI of file')
+        subparser.add_argument('--out_dir', type=str, required=True, default=None,
+                               help='Tiff output directory')
+    
+    @classmethod
+    def validate_arguments(cls, known_args: argparse.Namespace, pipeline_options: t.List[str]):
+        pass
+
+
 
 class ReprojectTiffToWSG84(beam.DoFn):
     def process(self, uri):
