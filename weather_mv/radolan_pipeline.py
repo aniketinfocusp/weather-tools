@@ -5,13 +5,16 @@ from rasterio.io import MemoryFile
 import apache_beam as beam
 from apache_beam.io.filesystem import CompressionTypes, FileSystem, CompressedFile, DEFAULT_READ_BUFFER_SIZE
 from apache_beam.io.filesystems import FileSystems
-from weather_mv.loader_pipeline.sinks import ToDataSink
+from weather_mv.loader_pipeline.sinks import ToDataSink, KwargsFactoryMixin
+from weather_mv.loader_pipeline.ee import ToEarthEngine
+from weather_mv.loader_pipeline.pipeline import pattern_to_uris
 import dataclasses
 import argparse
 import tempfile
 import os
 import logging
 import shutil
+import json
 import subprocess
 import typing as t
 import xarray as xr
@@ -20,16 +23,6 @@ import numpy as np
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-uri = [
-    "/home/aniket/infocusp/anthromet/weather-tools-aniket/dump/dwd_radolan/WN2305101135_000",
-    "/hqome/aniket/infocusp/anthromet/weather-tools-aniket/dump/dwd_radolan/WN2305101135.tar.bz2",
-    "/home/aniket/infocusp/anthromet/weather-tools-aniket/dump/dwd_radolan/WN2305101135_005",
-    "/home/aniket/infocusp/anthromet/weather-tools-aniket/dump/dwd_radolan/WN2305101135_010"
-
-]
-
-out_dir = "/home/aniket/infocusp/anthromet/weather-tools-aniket/weather_mv/radolan_out"
 
 def _get_asset_name(uri):
     return uri.split('/')[-1].split('.')[0]
@@ -51,20 +44,25 @@ def copy(src: str, dst: str) -> None:
     err_msgs = ', '.join(map(lambda err: repr(err.stderr.decode('utf-8')), errors))
     logger.error(f'{msg} due to {err_msgs}.')
     raise EnvironmentError(msg, errors)
-
+@dataclasses.dataclass
 class FilterFiles(beam.DoFn):
+
+    asset_location: str
+
     def process(self, uri):
         asset_name = _get_asset_name(uri)
 
-        target_path = os.path.join(out_dir, f"{asset_name}.tif")
+        target_path = os.path.join(self.asset_location, f"{asset_name}.tif")
         
         if FileSystems.exists(target_path):
-            logger.info(f"File {asset_name}.tif already exists at out dir ({out_dir}).")
+            logger.info(f"File {asset_name}.tif already exists at out dir ({self.asset_location}).")
             return
         
         yield uri
-
+@dataclasses.dataclass
 class ConvertRadolanToTiff(beam.DoFn):
+
+    asset_location: str
 
     def get_crs(self):
         proj_osr = wrl.georef.create_osr("dwd-radolan")
@@ -110,9 +108,9 @@ class ConvertRadolanToTiff(beam.DoFn):
         transform = self.get_transform(meta)
 
         data = list(ds.values())
-
+        
         asset_name = _get_asset_name(uri)
-        output_path = os.path.join(out_dir, f"{_get_asset_name(asset_name)}.tif")
+        output_path = os.path.join(self.asset_location, f"{_get_asset_name(asset_name)}.tif")
 
         with MemoryFile() as memfile:
             with memfile.open(
@@ -143,14 +141,11 @@ class ConvertRadolanToTiff(beam.DoFn):
 @dataclasses.dataclass
 class RadolanPipeline(ToDataSink):
     uri: str
-    out_dir: str
 
     @classmethod
     def add_parser_arguments(cls, subparser: argparse.ArgumentParser):
         subparser.add_argument('--uri', type=str, required=True, default=None,
                                help='URI of file')
-        subparser.add_argument('--out_dir', type=str, required=True, default=None,
-                               help='Tiff output directory')
     
     @classmethod
     def validate_arguments(cls, known_args: argparse.Namespace, pipeline_options: t.List[str]):
@@ -158,13 +153,17 @@ class RadolanPipeline(ToDataSink):
 
 
 
+@dataclasses.dataclass
 class ReprojectTiffToWSG84(beam.DoFn):
+
+    asset_location: str
+
     def process(self, uri):
         asset_name = _get_asset_name(uri)
 
         input_file = uri
 
-        output_file = os.path.join(out_dir, f"{asset_name}_reproj.tiff")
+        output_file = os.path.join(self.asset_location, f"{asset_name}_reproj.tiff")
 
         cmd = ["gdalwarp", "-t_srs", "EPSG:4326", input_file, output_file]
         
@@ -175,24 +174,62 @@ class ReprojectTiffToWSG84(beam.DoFn):
 
         yield output_file
 
+@dataclasses.dataclass
+class MoveRadolanToEE(ToEarthEngine):
+    
+    asset_location: str
+
+    def expand(self, paths):
+        
+        out = (
+            paths
+            | 'Filter Files' >> beam.ParDo(FilterFiles(self.asset_location))
+            | beam.Reshuffle()
+            | 'Convert' >> beam.ParDo(ConvertRadolanToTiff(self.asset_location))
+            | 'Reproject' >> beam.ParDo(ReprojectTiffToWSG84(self.asset_location))
+            | 'Log' >> beam.Map(print)
+        )
+
+def pipeline(known_args: argparse.Namespace):
+    
+    all_uris = list(pattern_to_uris(known_args.uris, False))
+
+    asset_location = known_args.asset_location
+
+    print(f"asset loc: {asset_location}")
+
+    with beam.Pipeline() as p:
+        paths = p | 'Create' >> beam.Create(all_uris)
+
+        paths | MoveRadolanToEE.from_kwargs(**vars(known_args))
 
 if __name__ == "__main__":
     
+    parser = argparse.ArgumentParser(
+        prog='radolan-convert',
+        description='Weather Mover loads weather data from cloud storage into analytics engines.'
+    )
+
+    parser.add_argument('-i', '--uris', type=str, required=True,
+                      help="URI glob pattern matching input weather data, e.g. 'gs://ecmwf/era5/era5-2015-*.gb'. Or, "
+                           "a path to a Zarr.")
+    parser.add_argument('--zarr', action='store_true', default=False,
+                      help="Treat the input URI as a Zarr. If the URI ends with '.zarr', this will be set to True. "
+                           "Default: off")
+    parser.add_argument('--zarr_kwargs', type=json.loads, default='{}',
+                      help='Keyword arguments to pass into `xarray.open_zarr()`, as a JSON string. '
+                           'Default: `{"chunks": null, "consolidated": true}`.')
+    parser.add_argument('-d', '--dry-run', action='store_true', default=False,
+                      help='Preview the weather-mv job. Default: off')
+   
+
+    MoveRadolanToEE.add_parser_arguments(parser)
+
+    args = parser.parse_args()
+    args.first_uri = "dummy"
+
+    pipeline(args)
     
-    with beam.Pipeline() as p:
-
-        paths =  (p | beam.Create(uri))
-
-        out = (
-            paths
-            | 'Filter Files' >> beam.ParDo(FilterFiles())
-            | beam.Reshuffle()
-            | 'Convert' >> beam.ParDo(ConvertRadolanToTiff())
-            | 'Reproject' >> beam.ParDo(ReprojectTiffToWSG84())
-            | 'Log' >> beam.Map(print)
-            
-        )
-
-        # injest into earth engine
+    print("end pipeline")
 
 
