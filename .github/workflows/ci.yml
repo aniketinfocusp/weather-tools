@@ -52,12 +52,13 @@ jobs:
     - name: Setup conda environment
       uses: conda-incubator/setup-miniconda@v2
       with:
+        activate-environment: weather-tools
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
         channel-priority: flexible
+        allow-softlinks: true
         environment-file: ci${{ matrix.python-version}}.yml
         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-        activate-environment: weather-tools
     - name: Check MetView's installation
       shell: bash -l {0}
       run: python -m metview selfcheck
