@@ -1,7 +1,6 @@
 name: weather-tools
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python=3.8.13
   - apache-beam=2.40.0

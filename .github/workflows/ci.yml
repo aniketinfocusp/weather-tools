@@ -55,8 +55,6 @@ jobs:
         activate-environment: weather-tools
         python-version: ${{ matrix.python-version }}
         channels: conda-forge
-        channel-priority: strict
-        allow-softlinks: true
         environment-file: ci${{ matrix.python-version}}.yml
         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
     - name: Check MetView's installation
