@@ -40,3 +40,13 @@ def modify_license_queue(license_id: str, priority_list: list | None = []):
         return {"message": f"'{license_id}' license priority updated successfully."}
     except Exception:
         return {"message": f"Failed to update '{license_id}' license priority."}
+    
+@router.put("/priority/{license_id}")
+def modify_license_config_priority(license_id: str, config_name: str, priority: int):
+    if not db_client._check_license_exists(license_id):
+        raise HTTPException(status_code=404, detail="License's priority not found.")
+    try:
+        db_client._update_queue_config_priority(license_id, config_name, priority)
+        return {"message": f"'{license_id}' license '{config_name}' priority updated successfully."}
+    except Exception:
+        return {"message": f"Failed to update '{license_id}' license priority."}

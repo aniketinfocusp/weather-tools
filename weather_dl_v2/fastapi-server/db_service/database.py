@@ -235,3 +235,16 @@ class FirestoreClient(Database, CRUDOperations):
             result: WriteResult = self._get_db().collection('queues').document(snapshot.id).update({
                 'queue': firestore.ArrayRemove([config_name])})
             print(f"Updated {snapshot.id} queue in 'queues' collection. Update_time: {result.update_time}.")
+
+    def _update_queue_config_priority(self, license_id: str, config_name: str, priority: int) -> None:
+        snapshot: DocumentSnapshot = self._get_db().collection('queues').document(license_id).get()
+        priority_list = snapshot.to_dict()['queue']
+        if config_name not in priority_list:
+            print(f"'{config_name}' not in queue.")
+            raise ValueError()
+        new_priority_list = [c for c in priority_list if c != config_name]
+        new_priority_list.insert(priority, config_name)
+        result: WriteResult = self._get_db().collection('queues').document(license_id).update(
+            {'queue': new_priority_list}
+        )
+        print(f"Updated {snapshot.id} queue in 'queues' collection. Update_time: {result.update_time}.")
