@@ -34,15 +34,26 @@ def get_license_queue(
     ):
     print(queue_service._get_queue_by_license(license))
 
-@app.command("edit", help="Edit existing license queue.")
+@app.command("edit", help="Edit existing license queue. Queue can edited via a priority file or my moving a single config to a given priority.")
 def modify_license_queue(
         license: Annotated[str, typer.Argument(help="License ID.")],
-        file_path: Annotated[str, typer.Argument(help='''File path of priority json file. Example json: {"priority": ["c1.cfg", "c2.cfg",...]}''')]
+        file: Annotated[str, typer.Option("--file", "-f", help='''File path of priority json file. Example json: {"priority": ["c1.cfg", "c2.cfg",...]}''')] = None,
+        config: Annotated[str, typer.Option("--config", "-c", help="Config name for absolute oriority")] = None,
+        priority: Annotated[int, typer.Option("--priority", "-p", help="Absolute priority for the config in a license queue.")] = None
     ):
+
+    if file is None and (config is None and priority is None):
+        print("Priority file or config name with absolute priority must be passed.")
+        return
+
+    if config and not priority is None:
+        print(queue_service._edit_config_absolute_priority(license, config, priority))
+        return
+    
     validator = QueueValidator(valid_keys=["priority"])
 
     try:
-        data = validator.validate_json(file_path=file_path)
+        data = validator.validate_json(file_path=file)
         priority_list = data["priority"]
     except Exception as e:
         print(f"key error: {e}")
