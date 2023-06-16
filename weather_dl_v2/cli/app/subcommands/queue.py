@@ -39,7 +39,7 @@ def modify_license_queue(
         license: Annotated[str, typer.Argument(help="License ID.")],
         file: Annotated[str, typer.Option("--file", "-f", help='''File path of priority json file. Example json: {"priority": ["c1.cfg", "c2.cfg",...]}''')] = None,
         config: Annotated[str, typer.Option("--config", "-c", help="Config name for absolute priority.")] = None,
-        priority: Annotated[int, typer.Option("--priority", "-p", help="Absolute priority for the config in a license queue.")] = None
+        priority: Annotated[int, typer.Option("--priority", "-p", help="Absolute priority for the config in a license queue. Priority decreases in ascending order with 0 having highest priority.")] = None
     ):
 
     if file is None and (config is None and priority is None):
