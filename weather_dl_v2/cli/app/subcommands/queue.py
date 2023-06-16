@@ -45,6 +45,9 @@ def modify_license_queue(
     if file is None and (config is None and priority is None):
         print("Priority file or config name with absolute priority must be passed.")
         return
+    
+    if priority < 0:
+        print("Priority can not be negative.")
 
     if config and not priority is None:
         print(queue_service._edit_config_absolute_priority(license, config, priority))
