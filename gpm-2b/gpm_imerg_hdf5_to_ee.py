@@ -305,7 +305,7 @@ if __name__ == "__main__":
         (
             p
             | "Create" >> beam.Create(all_uris)
-            # | "FilterFiles" >> ee.FilterFilesTransform.from_kwargs(**vars(known_args))
+            | "FilterFiles" >> ee.FilterFilesTransform.from_kwargs(**vars(known_args))
             | "ReshuffleFiles" >> beam.Reshuffle()
             | "ConvertHDF5ToCog" >> beam.ParDo(ConvertHDF5ToCog.from_kwargs(**vars(known_args)))
             | "IngestIntoEE" >> ee.IngestIntoEETransform.from_kwargs(**vars(known_args))
