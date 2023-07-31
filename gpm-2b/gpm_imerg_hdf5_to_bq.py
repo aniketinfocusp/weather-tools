@@ -1,3 +1,4 @@
+import psutil
 import time
 import h5py
 import sys
@@ -13,13 +14,17 @@ from apache_beam.io import WriteToBigQuery, BigQueryDisposition
 
 
 # Constants
-NSCANS = 7934
+NSCANS = 10 #7934
 NRAYS = 49
 MULTIDIM_MAX = 8
 
 def validate_arguments(known_args: argparse.Namespace):
     """Validates arguments for DWD bufr data pipeline."""
     pass
+
+def print_mem(line_no = None):
+    process = psutil.Process()
+    print(f"process size- {line_no} {process.memory_info().rss / (1024*1024)} MB")
 
 @dataclasses.dataclass
 class ExtractRowFromScan(beam.DoFn, KwargsFactoryMixin):
@@ -34,8 +39,10 @@ class ExtractRowFromScan(beam.DoFn, KwargsFactoryMixin):
                 row[var_name] = to_json_serializable_type(data[i])
 
             print(f"Extracted Row: {row}")
+            print_mem()
 
             yield row
+            del row
 
 @dataclasses.dataclass
 class PrepareScans(beam.DoFn, KwargsFactoryMixin):
@@ -84,6 +91,7 @@ class PrepareScans(beam.DoFn, KwargsFactoryMixin):
                                     break
 
                     yield scan_data
+                    del scan_data
 
 
 if __name__ == "__main__":
