@@ -189,3 +189,23 @@ async def delete_download(
         "config_name": config_name,
         "message": "Download config stopped & removed successfully.",
     }
+
+@router.put("/retry/{config_name}")
+async def retry_config(
+    config_name: str,
+    download_handler: DownloadHandler = Depends(get_download_handler),
+    manifest_handler: ManifestHandler = Depends(get_manifest_handler)
+    ):
+
+    if not await download_handler._check_download_exists(config_name):
+        logger.error(f"No such download config {config_name} to stop & remove.")
+        raise HTTPException(
+            status_code=404, detail=f"No such download config {config_name} to stop & remove."
+        )
+    
+    config_list = await manifest_handler._get_non_successfull_downloads(config_name)
+
+    return {
+        "msg": "Refetch initiated successfully."
+    }
+

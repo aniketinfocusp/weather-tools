@@ -38,6 +38,10 @@ class ManifestHandler(abc.ABC):
     async def _get_download_total_count(self, config_name: str) -> int:
         pass
 
+    @abc.abstractmethod
+    async def _get_non_successfull_downloads(self, config_name: str) -> list:
+        pass
+
 
 class ManifestHandlerMock(ManifestHandler):
 
@@ -55,6 +59,9 @@ class ManifestHandlerMock(ManifestHandler):
 
     async def _get_download_total_count(self, config_name: str) -> int:
         return 0
+    
+    async def _get_non_successfull_downloads(self, config_name: str) -> list:
+        return []
 
 
 class ManifestHandlerFirestore(ManifestHandler):
@@ -135,3 +142,49 @@ class ManifestHandlerFirestore(ManifestHandler):
         count = result[0][0].value
 
         return count
+    
+    # async def _get_non_successfull_downloads(self, config_name: str) -> list:
+    #     and_filter = And(
+    #         filters=[
+    #             FieldFilter("stage", "!=", "upload"),
+    #             FieldFilter("status", "!=", "success"),
+    #         ]
+    #     )
+
+    #     docs = (
+    #         self.db.collection(self.collection)
+    #         .where(filter=FieldFilter("config_name", "==", config_name))
+    #         .where(filter=and_filter)
+    #         .stream()
+    #     )
+    #     return [doc.to_dict() async for doc in docs]
+
+    async def _get_non_successfull_downloads(self, config_name: str) -> list:
+
+        # failed_filter = And(filters=[FieldFilter("status", "==", "failure")])
+        # inprogress_filter = And(filters=[FieldFilter("status", "==", "scheduled")])
+        # scheduled_filter = And( filters=[
+        #         FieldFilter("status", "==", "success"),
+        #         FieldFilter("stage", "!=", "upload"),
+        #     ])
+        
+        # or_filter = Or(filters=[failed_filter, inprogress_filter, scheduled_filter])
+
+        or_filter = Or(filters=[
+          
+            And(filters=[
+                FieldFilter("status","!=", "success"),
+                FieldFilter("stage","==", "upload"),
+            ]),
+            FieldFilter("stage","==", "fetch"),
+            FieldFilter("stage","==", "download"),
+        ])
+
+        docs = (
+            self.db.collection(self.collection)
+            .where(filter=FieldFilter("config_name", "==", config_name))
+            .where(filter=or_filter)
+            .stream()
+        )
+        return [doc.to_dict() async for doc in docs]
+
