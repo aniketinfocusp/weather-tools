@@ -13,17 +13,16 @@ import rasterio
 import typing as t
 import numpy as np
 import apache_beam as beam
-from apache_beam.io.filesystems import FileSystems
-from apache_beam.io.gcp.gcsio import WRITE_CHUNK_SIZE
-from weather_mv import loader_pipeline as lp
 from pyresample import kd_tree, geometry, create_area_def
 from rasterio.transform import from_origin
 from rasterio.io import MemoryFile
-from weather_mv.loader_pipeline import ee
-from weather_mv.loader_pipeline.ee import AssetData
-from weather_mv.loader_pipeline.ee import get_ee_safe_name
-from weather_mv.loader_pipeline.pipeline import pattern_to_uris
-from weather_mv.loader_pipeline.sinks import KwargsFactoryMixin, open_local
+from apache_beam.io.filesystems import FileSystems
+from apache_beam.io.gcp.gcsio import WRITE_CHUNK_SIZE
+import loader_pipeline as lp
+from loader_pipeline import ee
+from loader_pipeline.ee import AssetData, get_ee_safe_name
+from loader_pipeline.pipeline import pattern_to_uris
+from loader_pipeline.sinks import KwargsFactoryMixin, open_local
 
 
 @dataclasses.dataclass
@@ -267,7 +266,7 @@ class ConvertHDF5ToCog(beam.DoFn, KwargsFactoryMixin):
     
     def process(self, uri):
         with open_local(uri) as local_path:
-            assert self.is_h5_file(uri),  f'File "{uri}" not in HDF5 format.'
+            assert self.is_h5_file(local_path),  f'File "{uri}" not in HDF5 format.'
                 
             hdf_file = h5py.File(local_path, 'r')
 
@@ -305,7 +304,7 @@ if __name__ == "__main__":
         (
             p
             | "Create" >> beam.Create(all_uris)
-            | "FilterFiles" >> ee.FilterFilesTransform.from_kwargs(**vars(known_args))
+            # | "FilterFiles" >> ee.FilterFilesTransform.from_kwargs(**vars(known_args))
             | "ReshuffleFiles" >> beam.Reshuffle()
             | "ConvertHDF5ToCog" >> beam.ParDo(ConvertHDF5ToCog.from_kwargs(**vars(known_args)))
             | "IngestIntoEE" >> ee.IngestIntoEETransform.from_kwargs(**vars(known_args))
