@@ -3,10 +3,15 @@ This program downloads ECMWF data & upload it into GCS.
 """
 import tempfile
 import os
+import subprocess
 import sys
 from manifest import FirestoreManifest, Stage
 from util import copy, download_with_aria2
 import datetime
+import logging
+from downloader_config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 def download(url: str, path: str) -> None:
@@ -24,6 +29,8 @@ def main(
     config_name, dataset, selection, user_id, url, target_path, license_id
 ) -> None:
     """Download data from a client to a temp file."""
+
+    logger.info(f"Using config: {get_config().__dict__}")
 
     manifest = FirestoreManifest(license_id=license_id)
     temp_name = ""

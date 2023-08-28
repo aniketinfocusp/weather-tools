@@ -11,6 +11,7 @@ from job_creator import create_download_job
 from clients import CLIENTS
 from manifest import FirestoreManifest
 from util import exceptionit
+from deployment_config import get_config
 
 db_client = FirestoreClient()
 secretmanager_client = secretmanager.SecretManagerServiceClient()
@@ -71,6 +72,7 @@ def fetch_request_from_db():
 
 def main():
     logger.info("Started looking at the request.")
+    logger.info(f"Using config: {get_config().__dict__}")
     with ThreadPoolExecutor(concurrency_limit) as executor:
         while True:
             # Fetch a request from the database

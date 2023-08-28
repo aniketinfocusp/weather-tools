@@ -1,0 +1,9 @@
+{
+    "download_collection": "XXXX",
+    "queues_collection": "XXXX",
+    "license_collection": "XXXX",
+    "manifest_collection": "XXXX",
+    "license_deployment_image": "XXXXXXXX",
+    "downloader_k8_image": "XXXXXXX",
+    "welcome_message": "Welcome to FastAPI Server."
+}

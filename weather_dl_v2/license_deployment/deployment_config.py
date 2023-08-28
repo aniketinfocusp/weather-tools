@@ -12,6 +12,9 @@ class DeploymentConfig:
     license_collection: str = ""
     manifest_collection: str = ""
     downloader_k8_image: str = ""
+    license_deployment_image: str = ""
+    welcome_message: str = ""
+
     kwargs: t.Optional[t.Dict[str, Values]] = dataclasses.field(default_factory=dict)
 
     @classmethod
@@ -32,7 +35,7 @@ deployment_config = None
 
 def get_config():
     global deployment_config
-    deployment_config_json = "deployment_config.json"
+    deployment_config_json = "deployment_config/config.json"
 
     if deployment_config is None:
         with open(deployment_config_json) as file:

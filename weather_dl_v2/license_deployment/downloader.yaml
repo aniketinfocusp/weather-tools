@@ -19,10 +19,15 @@ spec:
             memory: "2Gi"                 # RAM: 2 GiB
             ephemeral-storage: "100Gi"    # Storage: 100 GiB
         volumeMounts:
-        - name: data
-          mountPath: /data
+        # - name: data
+        #   mountPath: /data
+        - name: config-volume
+          mountPath: ./downloader_config
       restartPolicy: Never
       volumes:
-      - name: data
-        emptyDir:
-          sizeLimit: 100Gi
+      # - name: data
+      #   emptyDir:
+      #     sizeLimit: 100Gi
+      - name: config-volume
+        configMap:
+          name: dl-v2-config

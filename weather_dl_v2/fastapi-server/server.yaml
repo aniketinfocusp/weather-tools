@@ -39,10 +39,17 @@ spec:
     spec:
       containers:
         - name: weather-dl-v2-server-api
-          image: XXXXXXX
+          image: gcr.io/anthromet-ingestion/weather-tools-dev:weather-dl-v2-server
           ports:
             - containerPort: 8080
           imagePullPolicy: Always
+          volumeMounts:
+            - name: config-volume
+              mountPath: ./server_config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: dl-v2-config
           # resources:
           #   # You must specify requests for CPU to autoscale
           #   # based on CPU utilization

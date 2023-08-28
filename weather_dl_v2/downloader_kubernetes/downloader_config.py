@@ -7,7 +7,14 @@ Values = t.Union[t.List["Values"], t.Dict[str, "Values"], bool, int, float, str]
 
 @dataclasses.dataclass
 class DownloaderConfig:
+    download_collection: str = ""
+    queues_collection: str = ""
+    license_collection: str = ""
     manifest_collection: str = ""
+    downloader_k8_image: str = ""
+    license_deployment_image: str = ""
+    welcome_message: str = ""
+
     kwargs: t.Optional[t.Dict[str, Values]] = dataclasses.field(default_factory=dict)
 
     @classmethod
@@ -28,7 +35,7 @@ downloader_config = None
 
 def get_config():
     global downloader_config
-    downloader_config_json = "downloader_config.json"
+    downloader_config_json = "downloader_config/config.json"
 
     if downloader_config is None:
         with open(downloader_config_json) as file:
