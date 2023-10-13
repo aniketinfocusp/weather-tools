@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: partition-job
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        config: xxxx
+    spec:
+      containers:
+      - name: partition-job
+        image: XXXXXXX
+        imagePullPolicy: Always
+        command: []
+        volumeMounts:
+          - name: config-volume
+            mountPath: ./config
+        resources:
+          requests:
+            cpu: "1000m"                  # CPU: 1 vCPU
+            memory: "2Gi"                 # RAM: 2 GiB
+            ephemeral-storage: "100Gi"    # Storage: 100 GiB
+      restartPolicy: Never
+      volumes:
+      - name: config-volume
+        configMap:
+          name: dl-v2-config

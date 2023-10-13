@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: manifest-job
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    # metadata:
+    #   labels:
+    #     config: xxxx
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: downloader-pool
+      containers:
+      - name: manifest-job
+        image: XXXXXXX
+        imagePullPolicy: Always
+        command: []
+        volumeMounts:
+        - name: config-volume
+          mountPath: ./config
+        resources:
+          requests:
+            cpu: "1000m"                  # CPU: 16 vCPU
+            memory: "2Gi"                 # RAM: 2 GiB
+            ephemeral-storage: "1Gi"    # Storage: 100 GiB
+      restartPolicy: Never
+      volumes:
+      - name: config-volume
+        configMap:
+          name: dl-v2-config

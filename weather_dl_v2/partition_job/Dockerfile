@@ -1,0 +1,17 @@
+FROM continuumio/miniconda3:latest
+
+# Update miniconda
+RUN conda update conda -y
+
+# Add the mamba solver for faster builds
+RUN conda install -n base conda-libmamba-solver
+RUN conda config --set solver libmamba
+
+# Create conda env using environment.yml
+COPY . .
+RUN conda env create -f environment.yml --debug
+
+# Activate the conda env and update the PATH
+ARG CONDA_ENV_NAME=weather-dl-v2-partition-job
+RUN echo "source activate ${CONDA_ENV_NAME}" >> ~/.bashrc
+ENV PATH /opt/conda/envs/${CONDA_ENV_NAME}/bin:$PATH
